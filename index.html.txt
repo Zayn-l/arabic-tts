@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Arabic Learning Pro V2</title>
+
+<style>
+body { font-family: Arial; padding: 20px; background:#fafafa; }
+
+textarea {
+  width:100%;
+  height:140px;
+  padding:10px;
+  font-size:16px;
+}
+
+button {
+  padding:10px 14px;
+  margin:5px;
+  cursor:pointer;
+}
+
+.item {
+  background:white;
+  padding:10px;
+  margin:8px 0;
+  border-radius:10px;
+  border:1px solid #ddd;
+  cursor:pointer;
+}
+
+.item:hover { background:#f3f3f3; }
+
+.ar { font-size:18px; font-weight:bold; }
+
+.zh { color:gray; margin-top:5px; }
+
+.active { background:#cde6ff !important; }
+</style>
+</head>
+
+<body>
+
+<h2>🇸🇦 Arabic Learning Pro (TTS + Translation)</h2>
+
+<textarea id="input">
+السلام عليكم يا أصدقائي.
+أنا إسماعيل، صيني، وأعيش في مدينة ييوو.
+اليوم أحب آخذكم معي، ونشوف شركتي.
+هذه شركة سيلرز يونيون.
+من أكبر شركات التصدير والتوريد في ييوو.
+</textarea>
+
+<br>
+
+<button onclick="build()">生成学习内容</button>
+<button onclick="playAll()">连续播放</button>
+<button onclick="stop()">停止</button>
+
+<hr>
+
+<div id="list"></div>
+
+<script>
+let sentences = [];
+let index = 0;
+let cache = {};
+
+// 分句
+function build(){
+  let text = document.getElementById("input").value;
+
+  sentences = text.split(/\n+/).filter(s => s.trim());
+
+  let html = "";
+
+  sentences.forEach((s,i)=>{
+    html += `
+    <div class="item" id="item${i}" onclick="play(${i})">
+      <div class="ar">${s}</div>
+      <div class="zh" id="zh${i}">翻译加载中...</div>
+    </div>`;
+  });
+
+  document.getElementById("list").innerHTML = html;
+
+  sentences.forEach((s,i)=> translate(s,i));
+}
+
+// 🔊 语音
+function play(i){
+  highlight(i);
+
+  let u = new SpeechSynthesisUtterance(sentences[i]);
+  u.lang = "ar-SA";
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+
+  index = i;
+}
+
+// 高亮
+function highlight(i){
+  document.querySelectorAll(".item").forEach(e=>e.style.background="white");
+  document.getElementById("item"+i).style.background="#cde6ff";
+}
+
+// 连播
+function playAll(){
+  index = 0;
+  next();
+}
+
+function next(){
+  if(index >= sentences.length) return;
+
+  play(index);
+
+  setTimeout(()=>{
+    index++;
+    next();
+  }, 2500);
+}
+
+// 停止
+function stop(){
+  speechSynthesis.cancel();
+}
+
+// 🌐 翻译（核心升级）
+async function translate(text,i){
+
+  if(cache[text]){
+    document.getElementById("zh"+i).innerText = cache[text];
+    return;
+  }
+
+  try {
+    let res = await fetch(
+      "https://api.mymemory.translated.net/get?q="
+      + encodeURIComponent(text)
+      + "&langpair=ar|zh-CN"
+    );
+
+    let data = await res.json();
+
+    let zh = data.responseData.translatedText;
+
+    cache[text] = zh;
+
+    document.getElementById("zh"+i).innerText = zh;
+
+  } catch(e){
+    document.getElementById("zh"+i).innerText = "翻译失败";
+  }
+}
+</script>
+
+</body>
+</html>
